@@ -23,6 +23,7 @@ import meteordevelopment.meteorclient.systems.System;
 import meteordevelopment.meteorclient.systems.Systems;
 import meteordevelopment.meteorclient.systems.modules.combat.*;
 import meteordevelopment.meteorclient.systems.modules.misc.*;
+import meteordevelopment.meteorclient.systems.modules.misc.elytrabot.*;
 import meteordevelopment.meteorclient.systems.modules.misc.swarm.Swarm;
 import meteordevelopment.meteorclient.systems.modules.movement.*;
 import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraFly;
@@ -425,6 +426,8 @@ public class Modules extends System<Modules> {
         add(new BurrowBreaker());
         add(new SelfTrapPlus());
         add(new SurroundPlus());
+        add(new GhostCA());
+        add(new TargetStrafe());
     }
 
     private void initPlayer() {
@@ -596,6 +599,10 @@ public class Modules extends System<Modules> {
         add(new ServerSpoof());
         add(new InventoryTweaks());
         add(new RPC());
+        add(new AntiAim());
+        add(new ChorusPredict());
+        add(new StrictMove());
+        add(new ElytraBotThreaded());
     }
 
     private void initCrash() {
