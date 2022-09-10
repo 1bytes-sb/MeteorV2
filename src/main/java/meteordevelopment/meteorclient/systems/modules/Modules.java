@@ -391,6 +391,7 @@ public class Modules extends System<Modules> {
         add(new AntiAnchor());
         add(new AntiAnvil());
         add(new AntiBed());
+        add(new AntiSurround());
         add(new ArrowDodge());
         add(new AutoAnvil());
         add(new AutoArmor());
@@ -405,6 +406,7 @@ public class Modules extends System<Modules> {
         add(new BedAura());
         add(new BedAura1());
         add(new BedDisabler());
+        add(new BedGod());
         add(new BowAimbot());
         add(new BowSpam());
         add(new Burrow());
