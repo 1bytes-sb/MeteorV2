@@ -574,6 +574,8 @@ public class Modules extends System<Modules> {
         add(new NewChunks());
         add(new Painter());
         add(new SoundLocator());
+        add(new Boom());
+        add(new Voider());
     }
 
     private void initMisc() {
@@ -618,6 +620,7 @@ public class Modules extends System<Modules> {
         add(new MovementCrash());
         add(new PacketSpammer());
         add(new SequenceCrash());
+        add(new ChunkCrash());
     }
 
     private void initChat() {
