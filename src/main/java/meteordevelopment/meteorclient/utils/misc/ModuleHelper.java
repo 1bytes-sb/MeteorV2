@@ -21,7 +21,7 @@ public class ModuleHelper {
 
     public static List<ReaperModule> combatModules = new ArrayList<>(Arrays.asList(
         Modules.get().get(AnchorGod.class),
-        Modules.get().get(AntiSurround.class),
+        Modules.get().get(Surroundbreaker.class),
         //Modules.get().get(AutoCrystal.class),
         Modules.get().get(BedGod.class)
         //Modules.get().get(CevBreaker.class),

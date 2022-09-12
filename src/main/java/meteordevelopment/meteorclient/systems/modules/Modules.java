@@ -392,6 +392,7 @@ public class Modules extends System<Modules> {
         add(new AntiAnchor());
         add(new AntiAnvil());
         add(new AntiBed());
+        add(new Surroundbreaker());
         add(new AntiSurround());
         add(new ArrowDodge());
         add(new AutoAnvil());
@@ -399,9 +400,11 @@ public class Modules extends System<Modules> {
         add(new AutoBedCraft());
         add(new AutoCity());
         add(new AutoCityPlus());
+        add(new AutoCityPlus2());
         add(new AutoEXP());
         add(new AutoTotem());
         add(new AutoTrap());
+        add(new AutoTrapPlus());
         add(new AutoWeapon());
         add(new AutoWeb());
         add(new BedAura());
@@ -411,21 +414,29 @@ public class Modules extends System<Modules> {
         add(new BowAimbot());
         add(new BowSpam());
         add(new Burrow());
+        add(new BurrowESP());
+        add(new BurrowMiner());
         add(new BlockIn());
+        add(new BananaBomber());
+        add(new CevBreaker());
         add(new Criticals());
         add(new CrystalAura());
         add(new Hitboxes());
         add(new HoleFiller());
         add(new KillAura());
+        add(new PostTickKA());
         add(new Offhand());
         add(new Quiver());
         add(new SelfAnvil());
         add(new SelfTrap());
         add(new SelfWeb());
+        add(new StrafePlus());
         add(new Surround());
         add(new BurrowBreaker());
         add(new SelfTrapPlus());
+        add(new SelfTrapPlus2());
         add(new SurroundPlus());
+        add(new SurroundPlus2());
         add(new GhostCA());
         add(new TargetStrafe());
     }
@@ -463,6 +474,7 @@ public class Modules extends System<Modules> {
     private void initMovement() {
         add(new AirJump());
         add(new Anchor());
+        add(new AnchorPlus());
         add(new AntiAFK());
         add(new AntiLevitation());
         add(new AntiVoid());

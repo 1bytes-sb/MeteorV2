@@ -1,200 +1,251 @@
 package meteordevelopment.meteorclient.systems.modules.combat;
 
 import meteordevelopment.meteorclient.systems.modules.Categories;
-import meteordevelopment.meteorclient.utils.combat.CityUtils;
-import meteordevelopment.meteorclient.utils.misc.ReaperModule;
-import meteordevelopment.meteorclient.utils.misc.Task;
-import meteordevelopment.meteorclient.events.entity.player.FinishUsingItemEvent;
-import meteordevelopment.meteorclient.events.render.Render2DEvent;
+import meteordevelopment.meteorclient.utils.BEntityUtils;
+import meteordevelopment.meteorclient.utils.BPlayerUtils;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
-import meteordevelopment.meteorclient.mixin.ClientPlayerInteractionManagerAccessor;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
-import meteordevelopment.meteorclient.renderer.text.TextRenderer;
 import meteordevelopment.meteorclient.settings.*;
+import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.entity.EntityUtils;
 import meteordevelopment.meteorclient.utils.entity.SortPriority;
 import meteordevelopment.meteorclient.utils.entity.TargetUtils;
-import meteordevelopment.meteorclient.utils.misc.Vec3;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
-import meteordevelopment.meteorclient.utils.player.Rotations;
-import meteordevelopment.meteorclient.utils.render.NametagUtils;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
+import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
+import meteordevelopment.orbit.EventPriority;
+import net.minecraft.block.AbstractButtonBlock;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
-import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 
-public class AntiSurround extends ReaperModule {
-    private final SettingGroup sgGeneral = settings.getDefaultGroup();
-    private final SettingGroup sgMisc = settings.createGroup("Misc");
-    private final SettingGroup sgRender = settings.createGroup("Render");
-    private final SettingGroup sgNone = settings.createGroup("");
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
-    //private final Setting<Notifications.Mode> notifications = sgNone.add(new EnumSetting.Builder<Notifications.Mode>().name("notifications").defaultValue(Notifications.Mode.Toast).build());
-
-    private final Setting<Mode> breakMode = sgGeneral.add(new EnumSetting.Builder<Mode>().name("break-mode").description("The way to break the blocks.").defaultValue(Mode.Client).build());
-    private final Setting<Integer> targetRange = sgGeneral.add(new IntSetting.Builder().name("target-range").description("The range players can be targeted.").defaultValue(5).sliderRange(0, 7).build());
-    private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder().name("rotate").description("Automatically faces towards the blocks being placed.").defaultValue(false).build());
-    //private final Setting<Boolean> keepBreaking = sgGeneral.add(new BoolSetting.Builder().name("keep-breaking").defaultValue(false).build());
-
-    private final Setting<Boolean> rightClickEat = sgMisc.add(new BoolSetting.Builder().name("right-click-eat").description("Stops breaking the block and starts eating EGapple.").defaultValue(false).build());
-    private final Setting<Boolean> cancelEat = sgMisc.add(new BoolSetting.Builder().name("cancel-eat").description("Press right button again to stop eating.").defaultValue(true).visible(rightClickEat::get).build());
-    private final Setting<Boolean> useCrystals   = sgMisc.add(new BoolSetting.Builder().name("use-crystals").description("Places crystal forward to the target city block.").defaultValue(true).build());
-    private final Setting<Double> breakProgress = sgMisc.add(new DoubleSetting.Builder().name("break-progress").description("Places crystal if break progress of breaking block is higher.").defaultValue(0.979).sliderRange(0, 1).visible(useCrystals::get).build());
-    private final Setting<Boolean> support = sgMisc.add(new BoolSetting.Builder().name("support").description("Places obsidian block under potential crystal position.").defaultValue(false).visible(useCrystals::get).build());
-    private final Setting<Boolean> ironPickaxe = sgMisc.add(new BoolSetting.Builder().name("iron-pickaxe").description("Uses iron pickaxe.").defaultValue(false).build());
-
-    private final Setting<Boolean> render = sgRender.add(new BoolSetting.Builder().name("render").description("Renders the block where it is placing a bed.").defaultValue(true).build());
-    private final Setting<ShapeMode> shapeMode = sgRender.add(new EnumSetting.Builder<ShapeMode>().name("shape-mode").description("How the shapes are rendered.").defaultValue(ShapeMode.Both).visible(render::get).build());
-    private final Setting<SettingColor> sideColor = sgRender.add(new ColorSetting.Builder().name("side-side").description("The side color of the target block rendering.").defaultValue(new SettingColor(144, 250, 255, 10)).visible(() -> render.get() && (shapeMode.get() == ShapeMode.Sides || shapeMode.get() == ShapeMode.Both)).build());
-    private final Setting<SettingColor> lineColor = sgRender.add(new ColorSetting.Builder().name("line-line").description("The line color of the target block rendering.").defaultValue(new SettingColor(146, 255, 228)).visible(() -> render.get() && (shapeMode.get() == ShapeMode.Lines || shapeMode.get() == ShapeMode.Both)).build());
-    private final Setting<Boolean> renderProgress = sgRender.add(new BoolSetting.Builder().name("render-progress").description("Renders the breaking progress.").defaultValue(true).build());
-    private final Setting<Double> scale = sgRender.add(new DoubleSetting.Builder().name("scale").description("Scale of the breaking progress.").defaultValue(1.5).sliderRange(0.01, 3).visible(renderProgress::get).build());
-
-    public AntiSurround() {
-        super(Categories.Combat, "anti-surround", "Automatically breaks target's surround.");
+public class AntiSurround extends Module {
+    public enum TrapType {
+        BothTrapped,
+        AnyTrapped,
+        TopTrapped,
+        FaceTrapped,
+        Always
     }
 
-    private FindItemResult pickaxe, gap, crystal, obsidian;
-    private BlockPos breakPos;
-    private PlayerEntity target;
-    private boolean isEating;
 
-    private final Task crystalTask = new Task();
-    private final Task supportTask = new Task();
+    private final SettingGroup sgGeneral = settings.getDefaultGroup();
+    private final SettingGroup sgRender = settings.createGroup("Render");
+
+
+    // General
+    private final Setting<Double> targetRange = sgGeneral.add(new DoubleSetting.Builder()
+            .name("target-range")
+            .description("The radius players can be in to be targeted.")
+            .defaultValue(5)
+            .range(0,7)
+            .sliderRange(0,7)
+            .build()
+    );
+
+    private final Setting<Double> placeRange = sgGeneral.add(new DoubleSetting.Builder()
+            .name("place-range")
+            .description("The radius buttons can be placed.")
+            .defaultValue(4)
+            .range(0,6)
+            .sliderRange(0,6)
+            .build()
+    );
+
+    private final Setting<TrapType> when = sgGeneral.add(new EnumSetting.Builder<TrapType>()
+            .name("when")
+            .description("When to start button trapping.")
+            .defaultValue(TrapType.Always)
+            .build()
+    );
+
+    private final Setting<Integer> delaySetting = sgGeneral.add(new IntSetting.Builder()
+            .name("place-delay")
+            .description("How many ticks between block placements.")
+            .defaultValue(1)
+            .range(0,20)
+            .sliderRange(0,20)
+            .build()
+    );
+
+    private final Setting<Boolean> rotate = sgGeneral.add(new BoolSetting.Builder()
+            .name("rotate")
+            .description("Sends rotation packets to the server when placing.")
+            .defaultValue(false)
+            .build()
+    );
+
+    private final Setting<Boolean> checkEntity = sgGeneral.add(new BoolSetting.Builder()
+            .name("Check Entity")
+            .description("Check if placing intersects with entities.")
+            .defaultValue(true)
+            .build()
+    );
+
+    private final Setting<Boolean> swapBack = sgGeneral.add(new BoolSetting.Builder()
+            .name("Swap Back")
+            .description("Swaps back to your previous slot after placing.")
+            .defaultValue(true)
+            .build()
+    );
+
+
+    // Render
+    private final Setting<Boolean> renderSwing = sgRender.add(new BoolSetting.Builder()
+            .name("render-swing")
+            .description("Renders your swing client-side.")
+            .defaultValue(true)
+            .build()
+    );
+
+    private final Setting<Boolean> renderTrap = sgRender.add(new BoolSetting.Builder()
+            .name("render-trap")
+            .description("Renders a block overlay where the button will be placed.")
+            .defaultValue(true)
+            .build()
+    );
+
+    private final Setting<ShapeMode> shapeMode = sgRender.add(new EnumSetting.Builder<ShapeMode>()
+            .name("shape-mode")
+            .description("How the shapes are rendered.")
+            .defaultValue(ShapeMode.Both)
+            .build()
+    );
+
+    private final Setting<SettingColor> sideColor = sgRender.add(new ColorSetting.Builder()
+            .name("side-color")
+            .description("The color of the sides of the blocks being rendered.")
+            .defaultValue(new SettingColor(204, 0, 0, 10))
+            .build()
+    );
+
+    private final Setting<SettingColor> lineColor = sgRender.add(new ColorSetting.Builder()
+            .name("line-color")
+            .description("The color of the lines of the blocks being rendered.")
+            .defaultValue(new SettingColor(204, 0, 0, 255))
+            .build()
+    );
+
+    private PlayerEntity target;
+    private final List<BlockPos> placePositions = new ArrayList<>();
+    private int delay;
+
+    public AntiSurround() {
+        super(Categories.Combat, "anti-surround", "Place items inside the enemy's surround to break it.");
+    }
 
     @Override
     public void onActivate() {
-        crystalTask.reset();
-        supportTask.reset();
-
-        breakPos = null;
-        isEating = false;
+        target = null;
+        if (!placePositions.isEmpty()) placePositions.clear();
+        delay = 0;
     }
 
-    @Override
-    public void onDeactivate() {
-        if (breakPos != null) mc.interactionManager.attackBlock(breakPos, Direction.UP);
-    }
+    @EventHandler(priority = EventPriority.MEDIUM + 60)
+    private void onTick(TickEvent.Pre event) {
 
-    @EventHandler
-    public void onEat(FinishUsingItemEvent event) {
-        if (isEating) {
-            mc.options.useKey.setPressed(false);
-            isEating = false;
-        }
-    }
-
-    @EventHandler
-    public void onTick(TickEvent.Post event) {
         target = TargetUtils.getPlayerTarget(targetRange.get(), SortPriority.LowestDistance);
-        if (TargetUtils.isBadTarget(target, targetRange.get())) {
-            error("No target found.");
-            //Notifications.send("Target is null", notifications);
+
+        if (target == null || Objects.requireNonNull(mc.player).distanceTo(target) > targetRange.get()) {
+            error("No target found, disabling...");
+            toggle();
+            return;
+        } else {
+            if (!isTrapped(target)) return;
+        }
+
+        FindItemResult button = InvUtils.findInHotbar(itemStack -> Block.getBlockFromItem(itemStack.getItem()) instanceof AbstractButtonBlock);
+        if (!button.found()) button = InvUtils.findInHotbar(Items.STRING);
+        if (!button.found()) button = InvUtils.findInHotbar(Items.REDSTONE);
+        // Check for enough resources
+        if (!button.found()) {
+            error("No button/string/redstone found in hotbar");
             toggle();
             return;
         }
 
-        pickaxe = InvUtils.findInHotbar((ironPickaxe.get() ? Items.IRON_PICKAXE : null), Items.NETHERITE_PICKAXE, Items.DIAMOND_PICKAXE);
-        if (!pickaxe.found()) {
-            //Notifications.send("There's no pickaxe in your hotbar", notifications);
-            error("No pickaxe found.");
-            toggle();
-            return;
+            placePositions.clear();
+
+            findPlacePos(target);
+
+            if (delay >= delaySetting.get() && placePositions.size() > 0) {
+                BlockPos blockPos = placePositions.get(placePositions.size() - 1);
+                if (BPlayerUtils.distanceFromEye(blockPos) > placeRange.get()) return;
+
+                if (BlockUtils.place(blockPos, button, rotate.get(), 50, renderSwing.get(), checkEntity.get(), swapBack.get()))
+                    placePositions.remove(blockPos);
+
+                delay = 0;
+            } else delay++;
         }
 
-        gap = InvUtils.find(Items.ENCHANTED_GOLDEN_APPLE, Items.GOLDEN_APPLE);
-        if (rightClickEat.get() && mc.options.useKey.isPressed() && gap.found()) isEating = true;
-
-        if (isEating) {
-            if (cancelEat.get() && mc.options.useKey.isPressed()) {
-                mc.options.useKey.setPressed(false);
-                isEating = false;
-            }
-            mc.player.getInventory().selectedSlot = gap.slot();
-            mc.options.useKey.setPressed(true);
-            return;
-        }
-
-        if (rotate.get() && breakPos != null) Rotations.rotate(Rotations.getYaw(breakPos), Rotations.getPitch(breakPos));
-
-        if (breakPos == null) breakPos = CityUtils.getBreakPos(target); // find pos once
-        if (breakPos == null || mc.world.getBlockState(breakPos).isAir()) { // toggles off if pos is null or air
-            if (breakPos == null) error("No break pos found.");
-            toggle();
-            return;
-        }
-
-        switch (breakMode.get()) {
-            case Client -> {
-                mc.player.getInventory().selectedSlot = pickaxe.slot();
-                mc.interactionManager.updateBlockBreakingProgress(breakPos, CityUtils.getDirection(breakPos));
-
-                crystal = InvUtils.findInHotbar(Items.END_CRYSTAL);
-                obsidian = InvUtils.findInHotbar(Items.OBSIDIAN);
-                if (useCrystals.get() && CityUtils.getCrystalPos(breakPos, support.get()) != null && crystal.found()) {
-                    float progress = ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress();
-                    if (progress < breakProgress.get()) return;
-
-                    if (support.get() && obsidian.found()) {
-                        supportTask.run(() -> {
-                            int prevSlot = mc.player.getInventory().selectedSlot;
-                            if (mc.player.getOffHandStack().getItem() != Items.OBSIDIAN)
-                                mc.player.getInventory().selectedSlot = obsidian.slot();
-                            mc.interactionManager.interactBlock(mc.player, obsidian.getHand(), new BlockHitResult(mc.player.getPos(), Direction.DOWN, CityUtils.getCrystalPos(breakPos, support.get()), true));
-                            mc.player.getInventory().selectedSlot = prevSlot;
-                        });
-                    }
-
-                    crystalTask.run(() -> {
-                        int prevSlot = mc.player.getInventory().selectedSlot;
-                        if (mc.player.getOffHandStack().getItem() != Items.END_CRYSTAL)
-                            mc.player.getInventory().selectedSlot = crystal.slot();
-                        mc.interactionManager.interactBlock(mc.player, crystal.getHand(), new BlockHitResult(mc.player.getPos(), Direction.DOWN, CityUtils.getCrystalPos(breakPos, false), true));
-                        mc.player.getInventory().selectedSlot = prevSlot;
-                    });
-                }
-            }
-//            case Packet -> {
-//
-//            }
-        }
-    }
 
     @EventHandler
-    public void onRender(Render3DEvent event) {
-        if (breakPos == null) return;
-
-        event.renderer.box(breakPos, sideColor.get(), lineColor.get(), shapeMode.get(), 0);
+    private void onRender(Render3DEvent event) {
+        if (!renderTrap.get() || placePositions.isEmpty()) return;
+        for (BlockPos pos : placePositions)
+            event.renderer.box(pos, sideColor.get(), lineColor.get(), shapeMode.get(), 0);
     }
 
-    @EventHandler
-    public void on2DRender(Render2DEvent event) {
-        if (breakPos == null || !renderProgress.get()) return;
 
-        Vec3 pos = new Vec3(breakPos.getX() + 0.5, breakPos.getY() + 0.5, breakPos.getZ() + 0.5);
-        if (NametagUtils.to2D(pos, scale.get())) {
-            String progress;
-            NametagUtils.begin(pos);
-            TextRenderer.get().begin(1.0, false, true);
-            progress = String.format("%.2f", ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress()) + "%";
-            if (progress.equals("0.00%")) progress = "";
-            TextRenderer.get().render(progress, -TextRenderer.get().getWidth(progress) / 2.0, 0.0, (crystalTask.isCalled() ? new Color(106, 255, 78, 255) : new Color(255, 255, 255, 255)));
-            TextRenderer.get().end();
-            NametagUtils.end();
+    private void add(BlockPos blockPos) {
+        if (!placePositions.contains(blockPos)
+                && mc.world.getBlockState(blockPos).getMaterial().isReplaceable()
+                && mc.world.canPlace(Blocks.STONE_BUTTON.getDefaultState(), blockPos, ShapeContext.absent())
+                && (mc.world.getBlockState(new BlockPos(blockPos.getX(), blockPos.getY() + 1, blockPos.getZ())).isFullCube(mc.world, new BlockPos(blockPos.getX(), blockPos.getY() + 1, blockPos.getZ()))
+                || mc.world.getBlockState(new BlockPos(blockPos.getX(), blockPos.getY() - 1, blockPos.getZ())).isFullCube(mc.world, new BlockPos(blockPos.getX(), blockPos.getY() - 1, blockPos.getZ()))
+                || mc.world.getBlockState(new BlockPos(blockPos.getX() + 1, blockPos.getY(), blockPos.getZ())).isFullCube(mc.world, new BlockPos(blockPos.getX() + 1, blockPos.getY(), blockPos.getZ()))
+                || mc.world.getBlockState(new BlockPos(blockPos.getX() - 1, blockPos.getY(), blockPos.getZ())).isFullCube(mc.world, new BlockPos(blockPos.getX() - 1, blockPos.getY(), blockPos.getZ()))
+                || mc.world.getBlockState(new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ() + 1)).isFullCube(mc.world, new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ() + 1))
+                || mc.world.getBlockState(new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ() - 1)).isFullCube(mc.world, new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ() - 1))
+        )
+        ) {
+            placePositions.add(blockPos);
         }
     }
+    private void findPlacePos(PlayerEntity target) {
+        placePositions.clear();
+        BlockPos targetPos = target.getBlockPos();
+        add(targetPos.add(1, 0, 0));
+        add(targetPos.add(0, 0, 1));
+        add(targetPos.add(-1, 0, 0));
+        add(targetPos.add(0, 0, -1));
+    }
 
-    public enum Mode {
-        Client
+    private boolean isTrapped(PlayerEntity target) {
+        switch (when.get()) {
+            case BothTrapped -> {
+                return BEntityUtils.isBothTrapped(target, BEntityUtils.BlastResistantType.NotAir);
+            }
+            case AnyTrapped -> {
+                return BEntityUtils.isAnyTrapped(target, BEntityUtils.BlastResistantType.NotAir);
+            }
+            case TopTrapped -> {
+                return BEntityUtils.isTopTrapped(target, BEntityUtils.BlastResistantType.NotAir);
+            }
+            case FaceTrapped -> {
+                return BEntityUtils.isFaceSurrounded(target, BEntityUtils.BlastResistantType.NotAir);
+            }
+            case Always -> {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
     public String getInfoString() {
-        return target != null ? target.getGameProfile().getName() : null; // adds target name to the module array list
+        return EntityUtils.getName(target);
     }
 }
