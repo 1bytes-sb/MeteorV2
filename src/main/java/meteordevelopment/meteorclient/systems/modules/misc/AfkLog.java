@@ -91,3 +91,4 @@ public class AfkLog extends Module {
         return (mc.player.getZ() <= zCoords.get() + radius.get() && mc.player.getZ() >= zCoords.get() - radius.get());
     }
 }
+
