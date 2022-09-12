@@ -439,6 +439,7 @@ public class Modules extends System<Modules> {
         add(new SurroundPlus2());
         add(new GhostCA());
         add(new TargetStrafe());
+        add(new TntDispenser());
     }
 
     private void initPlayer() {
@@ -617,6 +618,18 @@ public class Modules extends System<Modules> {
         add(new ChorusPredict());
         add(new StrictMove());
         add(new ElytraBotThreaded());
+        add(new AutoBuild());
+        add(new AfkLog());
+        add(new AutoFollow());
+        add(new AutoSex());
+        add(new BindClickExtra());
+        add(new BindClickFriend());
+        add(new InstaMinePlus());
+        add(new KillEffects());
+        add(new Platform());
+        add(new TimeAnimator());
+        add(new TPSSync());
+        add(new Twerk());
     }
 
     private void initCrash() {
