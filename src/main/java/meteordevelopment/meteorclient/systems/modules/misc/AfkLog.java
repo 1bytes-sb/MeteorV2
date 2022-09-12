@@ -69,7 +69,7 @@ public class AfkLog extends Module {
 
 
     public AfkLog() {
-        super(Categories.Combat, "afk-log", "Logs out when you are at a certain coords for afk travelling.");
+        super(Categories.Misc, "afk-log", "Logs out when you are at a certain coords for afk travelling.");
     }
 
 
