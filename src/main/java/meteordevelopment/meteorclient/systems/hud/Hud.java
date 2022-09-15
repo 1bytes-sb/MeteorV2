@@ -14,8 +14,11 @@ import meteordevelopment.meteorclient.systems.Systems;
 import meteordevelopment.meteorclient.systems.hud.elements.*;
 import meteordevelopment.meteorclient.systems.hud.screens.HudEditorScreen;
 import meteordevelopment.meteorclient.utils.Utils;
+import meteordevelopment.meteorclient.utils.StatsUtils;
 import meteordevelopment.meteorclient.utils.misc.NbtUtils;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
+import meteordevelopment.meteorclient.utils.misc.MeteorStarscript;
+import meteordevelopment.starscript.value.ValueMap;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -93,6 +96,7 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
         return Systems.get(Hud.class);
     }
 
+
     @Override
     public void init() {
         settings.registerColorSettings(null);
@@ -118,6 +122,18 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
         // Default config
         if (isFirstInit) resetToDefaultElements();
     }
+
+    public void onInitialize() {
+
+        MeteorStarscript.ss.set("meteor", new ValueMap()
+				.set("kills", StatsUtils::getKills)
+				.set("deaths", StatsUtils::getDeaths)
+				.set("kdr", StatsUtils::getKDR)
+				.set("killstreak", StatsUtils::getKillstreak)
+				.set("highscore", StatsUtils::getHighscore)
+				.set("crystalsps", StatsUtils::getCrystalsPs)
+        );           
+    } 
 
     public void register(HudElementInfo<?> info) {
         infos.put(info.name, info);

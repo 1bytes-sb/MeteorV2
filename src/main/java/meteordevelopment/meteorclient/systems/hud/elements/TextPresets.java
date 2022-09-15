@@ -8,12 +8,12 @@ public class TextPresets {
     public static final HudElementInfo<TextHud> INFO = new HudElementInfo<>(Hud.GROUP, "text2", "Displays arbitrary text with Starscript.", TextPresets::create);
 
     static {
-        addPreset("Kills", "Kills: #1{banana.kills}", 0);
-        addPreset("Deaths", "Deaths: #1{banana.deaths}", 0);
-        addPreset("KDR", "KDR: #1{banana.kdr}", 0);
-        addPreset("Highscore", "Highscore: #1{banana.highscore}", 0);
-        addPreset("Killstreak", "Killstreak: #1{banana.killstreak}", 0);
-        addPreset("Crystals/s", "Crystals/s: #1{banana.crystalsps}", 0);
+        addPreset("Kills", "Kills: #1{meteor.kills}", 0);
+        addPreset("Deaths", "Deaths: #1{meteor.deaths}", 0);
+        addPreset("KDR", "KDR: #1{meteor.kdr}", 0);
+        addPreset("Highscore", "Highscore: #1{meteor.highscore}", 0);
+        addPreset("Killstreak", "Killstreak: #1{meteor.killstreak}", 0);
+        addPreset("Crystals/s", "Crystals/s: #1{meteor.crystalsps}", 0);
     }
 
     private static TextHud create() {
