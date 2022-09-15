@@ -392,7 +392,7 @@ public class Modules extends System<Modules> {
         add(new AntiAnchor());
         add(new AntiAnvil());
         add(new AntiBed());
-        add(new AntiSurround());
+        add(new AntiTrap());
         add(new Surroundbreaker());
         add(new AntiSurround());
         add(new ArrowDodge());
