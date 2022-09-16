@@ -98,6 +98,19 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
 
 
     @Override
+    public void onInitialize() {
+
+        MeteorStarscript.ss.set("meteor", new ValueMap()
+				.set("kills", StatsUtils::getKills)
+				.set("deaths", StatsUtils::getDeaths)
+				.set("kdr", StatsUtils::getKDR)
+				.set("killstreak", StatsUtils::getKillstreak)
+				.set("highscore", StatsUtils::getHighscore)
+				.set("crystalsps", StatsUtils::getCrystalsPs)
+        );           
+    } 
+    
+    
     public void init() {
         settings.registerColorSettings(null);
 
@@ -123,17 +136,6 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
         if (isFirstInit) resetToDefaultElements();
     }
 
-    public void onInitialize() {
-
-        MeteorStarscript.ss.set("meteor", new ValueMap()
-				.set("kills", StatsUtils::getKills)
-				.set("deaths", StatsUtils::getDeaths)
-				.set("kdr", StatsUtils::getKDR)
-				.set("killstreak", StatsUtils::getKillstreak)
-				.set("highscore", StatsUtils::getHighscore)
-				.set("crystalsps", StatsUtils::getCrystalsPs)
-        );           
-    } 
 
     public void register(HudElementInfo<?> info) {
         infos.put(info.name, info);
