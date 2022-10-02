@@ -67,12 +67,6 @@ loom {
     accessWidenerPath = file("src/main/resources/meteor-client.accesswidener")
 }
 
-afterEvaluate {
-    migrateMappings.configure {
-        outputDir = project.file("src/main/java")
-    }
-}
-
 shadowJar {
 	configurations = [ project.configurations.shadow ]
 }
@@ -85,6 +79,10 @@ processResources {
     }
 }
 
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding("UTF-8")
+}
+
 jar {
 	from "LICENSE"
 
@@ -95,7 +93,7 @@ jar {
 
 remapJar {
 	dependsOn shadowJar
-	inputFile.set(shadowJar.archiveFile)
+	input.set(shadowJar.archiveFile)
 }
 
 javadoc {
